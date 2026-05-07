@@ -1,4 +1,4 @@
-import streamlit as st
+ import streamlit as st
 import json
 from datetime import datetime
 import os
@@ -21,11 +21,12 @@ def save_data(data):
 
 data = load_data()
 
+# ====================== 新規投稿 ======================
 with st.sidebar:
-    st.header("新しいライフハック")
-    title = st.text_input("タイトル（例: 朝のルーティン最適化）")
-    content = st.text_area("内容・ハック詳細", height=150)
-    tags = st.text_input("タグ（カンマ区切り）", placeholder="生産性,朝活,健康")
+    st.header("📝 新しいライフハック")
+    title = st.text_input("タイトル")
+    content = st.text_area("内容", height=150)
+    tags = st.text_input("タグ（カンマ区切り）", placeholder="生産性,朝活")
     
     if st.button("投稿する", type="primary"):
         if title and content:
@@ -41,32 +42,27 @@ with st.sidebar:
             save_data(data)
             st.success("投稿しました！")
             st.rerun()
-        else:
-            st.error("タイトルと内容を入力してください")
 
-st.subheader("📋 すべてのライフハック（スレッド展開）")
+# ====================== メイン表示 ======================
+st.subheader("📋 すべてのライフハック")
 
-for hack in data:
-    with st.expander(f"🔸 {hack['title']}  —  {hack['date']}  {' | '.join(hack.get('tags', []))}", expanded=False):
-        st.write(hack['content'])
+for i, hack in enumerate(data):
+    with st.expander(f"🔸 {hack['title']}  —  {hack['date']}  |  {' | '.join(hack.get('tags', []))}", expanded=False):
         
-        if hack.get('replies'):
-            st.markdown("**スレッド返信**")
-            for reply in hack['replies']:
-                st.info(f"↳ {reply['content']}  —  {reply['date']}")
-        
-        reply_content = st.text_area("このハックに返信・改善アイデアを追加", key=f"reply_{hack['id']}", height=80)
-        if st.button("返信する", key=f"btn_{hack['id']}"):
-            if reply_content.strip():
-                hack['replies'].append({
-                    "content": reply_content,
-                    "date": datetime.now().strftime("%Y-%m-%d %H:%M")
-                })
-                save_data(data)
-                st.success("返信追加！")
-                st.rerun()
+        # メイン内容表示・編集
+        col1, col2 = st.columns([7, 3])
+        with col1:
+            st.write(hack['content'])
+        with col2:
+            if st.button("✏️ 編集", key=f"edit_main_{i}"):
+                st.session_state[f"editing_main_{i}"] = True
 
-search = st.text_input("🔍 検索")
-if search:
-    filtered = [h for h in data if search.lower() in str(h).lower()]
-    st.write(f"検索結果: {len(filtered)}件")
+        # 編集モード
+        if st.session_state.get(f"editing_main_{i}", False):
+            new_title = st.text_input("新しいタイトル", value=hack['title'], key=f"new_title_{i}")
+            new_content = st.text_area("新しい内容", value=hack['content'], height=150, key=f"new_content_{i}")
+            new_tags = st.text_input("新しいタグ", value=",".join(hack.get('tags', [])), key=f"new_tags_{i}")
+            
+            col_a, col_b = st.columns(2)
+            with col_a:
+                if st.button("✅ 保存", key=f"save_main_{i}"):
