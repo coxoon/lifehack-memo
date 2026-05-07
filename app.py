@@ -26,7 +26,7 @@ with st.sidebar:
     st.header("📝 新しいライフハック")
     title = st.text_input("タイトル")
     content = st.text_area("内容", height=150)
-    tags = st.text_input("タグ（カンマ区切り）", placeholder="生産性,朝活")
+    tags = st.text_input("タグ（カンマ区切り）", placeholder="生産性,ハック")
     
     if st.button("投稿する", type="primary"):
         if title and content:
