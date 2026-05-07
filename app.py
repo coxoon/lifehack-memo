@@ -8,12 +8,12 @@ st.set_page_config(page_title="ライフハック・スレッドメモ", layout=
 CONFIG_FILE = "config.json"
 DATA_FILE = "lifehacks.json"
 
-# ====================== 設定読み込み ======================
+# ====================== 設定・認証 ======================
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {"password": None}  # 初回はNone
+    return {"password": None}
 
 def save_config(config):
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
@@ -21,33 +21,30 @@ def save_config(config):
 
 config = load_config()
 
-# ====================== 初回パスワード設定 ======================
+# 初回パスワード設定
 if config["password"] is None:
     st.title("🧠 初回パスワード設定")
     st.markdown("**初めての利用です。パスワードを設定してください。**")
-    
-    new_pw = st.text_input("パスワード", type="password", key="setup_pw")
-    new_pw_confirm = st.text_input("パスワード（確認）", type="password", key="setup_pw_confirm")
-    
-    if st.button("パスワードを設定する", type="primary"):
-        if new_pw and new_pw == new_pw_confirm:
-            config["password"] = new_pw
+    pw1 = st.text_input("パスワード", type="password", key="setup1")
+    pw2 = st.text_input("パスワード（確認）", type="password", key="setup2")
+    if st.button("設定する", type="primary"):
+        if pw1 and pw1 == pw2:
+            config["password"] = pw1
             save_config(config)
-            st.success("✅ パスワードを設定しました！")
+            st.success("設定完了！")
             st.rerun()
         else:
             st.error("パスワードが一致しません")
     st.stop()
 
-# ====================== ログイン ======================
+# ログイン
 PASSWORD = config["password"]
-
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    st.title("🔒 ライフハック・スレッドメモ帳")
-    pw = st.text_input("パスワードを入力してください", type="password")
+    st.title("🔒 ログイン")
+    pw = st.text_input("パスワード", type="password")
     if st.button("ログイン"):
         if pw == PASSWORD:
             st.session_state.authenticated = True
@@ -58,25 +55,22 @@ if not st.session_state.authenticated:
 
 # ====================== メインアプリ ======================
 st.title("🧠 ライフハック・スレッドメモ帳")
-st.caption("アイデアをスレッド展開して深掘り・整理しよう")
 
 with st.sidebar:
     st.header("⚙️ 設定")
-    
-    # パスワード変更
     with st.expander("🔑 パスワード変更"):
-        current = st.text_input("現在のパスワード", type="password", key="curr")
-        newp = st.text_input("新しいパスワード", type="password", key="newp")
-        newp2 = st.text_input("新しいパスワード（確認）", type="password", key="newp2")
-        if st.button("変更する"):
-            if current == PASSWORD and newp == newp2 and newp:
-                config["password"] = newp
+        cur = st.text_input("現在のパスワード", type="password", key="cur_pw")
+        new1 = st.text_input("新しいパスワード", type="password", key="new1")
+        new2 = st.text_input("新しいパスワード（確認）", type="password", key="new2")
+        if st.button("変更"):
+            if cur == PASSWORD and new1 == new2 and new1:
+                config["password"] = new1
                 save_config(config)
-                st.success("パスワード変更完了！ 再度ログインしてください。")
+                st.success("変更完了！再度ログインしてください")
                 st.session_state.authenticated = False
                 st.rerun()
             else:
-                st.error("入力に誤りがあります")
+                st.error("入力エラー")
 
     dark_mode = st.toggle("🌙 ダークモード", False)
     sort_option = st.selectbox("並び順", ["最新順", "古い順"])
@@ -100,7 +94,7 @@ with st.sidebar:
     st.header("📝 新規投稿")
     title = st.text_input("タイトル")
     content = st.text_area("内容（Markdown対応）", height=150)
-    tags = st.text_input("タグ（カンマ区切り）", placeholder="生産性,朝活")
+    tags = st.text_input("タグ（カンマ区切り）")
     importance = st.slider("重要度 ⭐", 1, 5, 3)
     
     if st.button("投稿する", type="primary"):
@@ -120,50 +114,119 @@ with st.sidebar:
             st.rerun()
 
 # ====================== 表示部分 ======================
-st.subheader("📋 ライフハック一覧")
-
-# タグフィルタ
-all_tags = set()
-for h in data:
-    all_tags.update(h.get("tags", []))
-selected_tags = st.multiselect("🏷️ タグでフィルタ", sorted(all_tags), key="tag_filter")
+st.subheader("📋 すべてのライフハック")
 
 # 並び替え
 sorted_data = sorted(data, key=lambda x: x["date"], reverse=(sort_option == "最新順"))
 
-# フィルタ適用
-display_data = [h for h in sorted_data if not selected_tags or any(t in h.get("tags", []) for t in selected_tags)]
+# タグフィルタ
+all_tags = set(tag for h in data for tag in h.get("tags", []))
+selected_tags = st.multiselect("タグでフィルタ", sorted(all_tags))
+
+display_data = [h for h in sorted_data 
+                if not selected_tags or any(t in h.get("tags", []) for t in selected_tags)]
 
 for idx, hack in enumerate(display_data):
     stars = "⭐" * hack.get("importance", 3)
-    with st.expander(f"{stars} {hack['title']} — {hack['date']}"):
+    
+    with st.expander(f"{stars} {hack['title']} — {hack['date']}", expanded=False):
         st.markdown(hack['content'])
+        
         if hack.get("tags"):
             st.caption(" ".join([f"`{t}`" for t in hack["tags"]]))
-        
-        # 編集・削除（簡略版）
+
+        # === メイン編集・削除 ===
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✏️ 編集", key=f"e{idx}"):
-                st.session_state[f"edit_{idx}"] = True
+            if st.button("✏️ 編集", key=f"edit_main_{hack['id']}"):
+                st.session_state[f"editing_main_{hack['id']}"] = True
         with col2:
-            if st.button("🗑 削除", key=f"d{idx}"):
-                st.session_state[f"del_{idx}"] = True
+            if st.button("🗑 削除", key=f"del_main_{hack['id']}"):
+                st.session_state[f"confirm_del_main_{hack['id']}"] = True
 
-        # 返信部分（Markdown対応）
-        for r, reply in enumerate(hack.get("replies", [])):
+        # メイン編集モード
+        if st.session_state.get(f"editing_main_{hack['id']}", False):
+            new_title = st.text_input("タイトル", hack["title"], key=f"nt_{hack['id']}")
+            new_content = st.text_area("内容", hack["content"], height=200, key=f"nc_{hack['id']}")
+            new_tags = st.text_input("タグ", ",".join(hack.get("tags", [])), key=f"ntg_{hack['id']}")
+            new_imp = st.slider("重要度", 1, 5, hack.get("importance", 3), key=f"ni_{hack['id']}")
+            
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("✅ 保存", key=f"save_main_{hack['id']}"):
+                    hack["title"] = new_title
+                    hack["content"] = new_content
+                    hack["tags"] = [t.strip() for t in new_tags.split(",") if t.strip()]
+                    hack["importance"] = new_imp
+                    hack["date"] = datetime.now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
+                    save_data(data)
+                    st.session_state[f"editing_main_{hack['id']}"] = False
+                    st.rerun()
+            with c2:
+                if st.button("❌ キャンセル", key=f"cancel_main_{hack['id']}"):
+                    st.session_state[f"editing_main_{hack['id']}"] = False
+                    st.rerun()
+
+        # メイン削除確認
+        if st.session_state.get(f"confirm_del_main_{hack['id']}", False):
+            st.warning("本当にこのハック全体を削除しますか？")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("はい、削除", key=f"yes_main_{hack['id']}"):
+                    data = [h for h in data if h["id"] != hack["id"]]
+                    save_data(data)
+                    st.success("削除しました")
+                    st.rerun()
+            with c2:
+                if st.button("キャンセル", key=f"no_main_{hack['id']}"):
+                    st.session_state[f"confirm_del_main_{hack['id']}"] = False
+                    st.rerun()
+
+        # ====================== 返信 ======================
+        st.markdown("**スレッド返信**")
+        for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(f"↳ {reply['content']}")
-        
-        reply_text = st.text_area("返信を追加（Markdown OK）", key=f"rep{idx}", height=80)
-        if st.button("返信する", key=f"btn{idx}"):
+            
+            rcol1, rcol2 = st.columns([1, 1])
+            with rcol1:
+                if st.button("✏️", key=f"edit_reply_{hack['id']}_{j}"):
+                    st.session_state[f"editing_reply_{hack['id']}_{j}"] = True
+            with rcol2:
+                if st.button("🗑", key=f"del_reply_{hack['id']}_{j}"):
+                    st.session_state[f"confirm_del_reply_{hack['id']}_{j}"] = True
+
+            # 返信編集
+            if st.session_state.get(f"editing_reply_{hack['id']}_{j}", False):
+                new_reply = st.text_area("返信編集", reply["content"], key=f"er_{hack['id']}_{j}")
+                if st.button("保存", key=f"save_r_{hack['id']}_{j}"):
+                    hack["replies"][j]["content"] = new_reply
+                    save_data(data)
+                    st.session_state[f"editing_reply_{hack['id']}_{j}"] = False
+                    st.rerun()
+                if st.button("キャンセル", key=f"can_r_{hack['id']}_{j}"):
+                    st.session_state[f"editing_reply_{hack['id']}_{j}"] = False
+                    st.rerun()
+
+            # 返信削除
+            if st.session_state.get(f"confirm_del_reply_{hack['id']}_{j}", False):
+                st.warning("この返信を削除しますか？")
+                if st.button("はい", key=f"yes_r_{hack['id']}_{j}"):
+                    hack["replies"].pop(j)
+                    save_data(data)
+                    st.success("削除しました")
+                    st.rerun()
+                if st.button("いいえ", key=f"no_r_{hack['id']}_{j}"):
+                    st.session_state[f"confirm_del_reply_{hack['id']}_{j}"] = False
+                    st.rerun()
+
+        # 新規返信
+        reply_text = st.text_area("返信を追加（Markdown OK）", key=f"new_reply_{hack['id']}", height=100)
+        if st.button("返信する", key=f"add_reply_{hack['id']}"):
             if reply_text.strip():
                 hack.setdefault("replies", []).append({
                     "content": reply_text,
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M")
                 })
                 save_data(data)
+                st.success("返信を追加しました")
                 st.rerun()
-
-# バックアップ
-if st.button("💾 全データをバックアップ"):
-    st.download_button("ダウンロード", json.dumps(data, ensure_ascii=False, indent=2), "lifehacks_backup.json")
