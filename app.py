@@ -33,7 +33,7 @@ with st.sidebar:
             new_hack = {
                 "id": len(data) + 1,
                 "title": title,
-                "content": content,   # 改行をそのまま保存
+                "content": content,
                 "tags": [t.strip() for t in tags.split(",") if t.strip()],
                 "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                 "replies": []
@@ -49,7 +49,7 @@ st.subheader("📋 すべてのライフハック")
 for i, hack in enumerate(data):
     with st.expander(f"🔸 {hack['title']}  —  {hack['date']}  |  {' | '.join(hack.get('tags', []))}", expanded=False):
         
-        # 改行を反映して表示（ここが重要）
+        # メイン内容（改行対応）
         st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
         
         # 編集・削除ボタン
@@ -61,7 +61,7 @@ for i, hack in enumerate(data):
             if st.button("🗑 削除", key=f"del_main_{i}"):
                 st.session_state[f"confirm_del_main_{i}"] = True
 
-        # 編集モード
+        # メイン編集モード
         if st.session_state.get(f"editing_main_{i}", False):
             new_title = st.text_input("タイトル", hack['title'], key=f"nt_{i}")
             new_content = st.text_area("内容（改行OK）", hack['content'], height=200, key=f"nc_{i}")
@@ -82,25 +82,27 @@ for i, hack in enumerate(data):
                     st.session_state[f"editing_main_{i}"] = False
                     st.rerun()
 
-        # 削除確認
+        # メイン削除確認
         if st.session_state.get(f"confirm_del_main_{i}", False):
-            st.warning("本当に削除しますか？")
+            st.warning("本当にこのハック全体を削除しますか？")
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("はい、削除", key=f"yes_main_{i}"):
                     del data[i]
                     save_data(data)
+                    st.success("削除しました")
                     st.rerun()
             with c2:
                 if st.button("キャンセル", key=f"no_main_{i}"):
                     st.session_state[f"confirm_del_main_{i}"] = False
                     st.rerun()
 
-        # ====================== 返信部分 ======================
+        # ====================== 返信部分（改行対応済み） ======================
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get('replies', [])):
             col1, col2, col3 = st.columns([6, 2, 2])
             with col1:
+                # ここを修正：返信も改行対応
                 st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
             
             with col2:
@@ -112,7 +114,7 @@ for i, hack in enumerate(data):
 
             # 返信編集
             if st.session_state.get(f"edit_r_{i}_{j}", False):
-                new_reply = st.text_area("返信編集", reply['content'], height=100, key=f"er_text_{i}_{j}")
+                new_reply = st.text_area("返信を編集", reply['content'], height=120, key=f"er_text_{i}_{j}")
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("保存", key=f"sr_{i}_{j}"):
@@ -134,7 +136,7 @@ for i, hack in enumerate(data):
                     if st.button("はい", key=f"yes_r_{i}_{j}"):
                         hack['replies'].pop(j)
                         save_data(data)
-                        st.success("削除しました")
+                        st.success("返信を削除しました")
                         st.rerun()
                 with c2:
                     if st.button("いいえ", key=f"no_r_{i}_{j}"):
@@ -142,7 +144,7 @@ for i, hack in enumerate(data):
                         st.rerun()
 
         # 新規返信
-        reply_content = st.text_area("返信・改善アイデアを追加（改行OK）", key=f"new_r_{i}", height=100)
+        reply_content = st.text_area("返信・改善アイデアを追加（改行OK）", key=f"new_r_{i}", height=120)
         if st.button("返信する", key=f"btn_{i}"):
             if reply_content.strip():
                 hack.setdefault('replies', []).append({
