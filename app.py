@@ -1,4 +1,4 @@
- import streamlit as st
+import streamlit as st
 import json
 from datetime import datetime
 import os
@@ -66,3 +66,81 @@ for i, hack in enumerate(data):
             col_a, col_b = st.columns(2)
             with col_a:
                 if st.button("✅ 保存", key=f"save_main_{i}"):
+                    hack['title'] = new_title
+                    hack['content'] = new_content
+                    hack['tags'] = [t.strip() for t in new_tags.split(",") if t.strip()]
+                    hack['date'] = datetime.now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
+                    save_data(data)
+                    st.success("更新しました！")
+                    st.session_state[f"editing_main_{i}"] = False
+                    st.rerun()
+            with col_b:
+                if st.button("❌ キャンセル", key=f"cancel_main_{i}"):
+                    st.session_state[f"editing_main_{i}"] = False
+                    st.rerun()
+
+        # メイン削除
+        if st.button("🗑 このハックを削除", key=f"del_main_{i}", type="secondary"):
+            if st.checkbox("本当に削除しますか？", key=f"confirm_main_{i}"):
+                del data[i]
+                save_data(data)
+                st.success("削除しました")
+                st.rerun()
+
+        # ====================== 返信部分 ======================
+        st.markdown("**スレッド返信**")
+        for j, reply in enumerate(hack.get('replies', [])):
+            col1, col2, col3 = st.columns([7, 1.5, 1.5])
+            with col1:
+                st.info(f"↳ {reply['content']}  —  {reply['date']}")
+            
+            with col2:
+                if st.button("✏️", key=f"edit_reply_{i}_{j}"):
+                    st.session_state[f"editing_reply_{i}_{j}"] = True
+            
+            with col3:
+                if st.button("🗑", key=f"del_reply_{i}_{j}"):
+                    if st.checkbox("削除？", key=f"confirm_reply_{i}_{j}"):
+                        hack['replies'].pop(j)
+                        save_data(data)
+                        st.success("返信を削除しました")
+                        st.rerun()
+
+            # 返信編集モード
+            if st.session_state.get(f"editing_reply_{i}_{j}", False):
+                new_reply = st.text_area("返信を編集", value=reply['content'], height=100, key=f"edit_text_{i}_{j}")
+                col_edit1, col_edit2 = st.columns(2)
+                with col_edit1:
+                    if st.button("保存", key=f"save_reply_{i}_{j}"):
+                        hack['replies'][j]['content'] = new_reply
+                        hack['replies'][j]['date'] = datetime.now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
+                        save_data(data)
+                        st.success("返信を更新しました")
+                        st.session_state[f"editing_reply_{i}_{j}"] = False
+                        st.rerun()
+                with col_edit2:
+                    if st.button("キャンセル", key=f"cancel_reply_{i}_{j}"):
+                        st.session_state[f"editing_reply_{i}_{j}"] = False
+                        st.rerun()
+
+        # 新規返信
+        reply_content = st.text_area("返信・改善アイデアを追加", key=f"new_reply_{i}", height=80)
+        if st.button("返信する", key=f"btn_reply_{i}"):
+            if reply_content.strip():
+                hack.setdefault('replies', []).append({
+                    "content": reply_content,
+                    "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                })
+                save_data(data)
+                st.success("返信を追加しました！")
+                st.rerun()
+
+# 検索
+search = st.text_input("🔍 検索（タイトル・内容）")
+if search:
+    filtered = [h for h in data if search.lower() in str(h).lower()]
+    st.write(f"検索結果: {len(filtered)} 件")
+
+# 全データダウンロード
+if st.button("💾 全データをバックアップ"):
+    st.download_button("ダウンロード", json.dumps(data, ensure_ascii=False, indent=2), "lifehacks_backup.json")
