@@ -71,14 +71,16 @@ def save_data(data):
 
 data = load_data()
 
-# 新規投稿
+# ====================== 新規投稿（入力欄リセット対応） ======================
 with st.sidebar:
     st.markdown("---")
     st.header("📝 新規投稿")
-    title = st.text_input("タイトル", key="new_title")
-    content = st.text_area("内容（改行OK）", height=180, key="new_content")
-    tags = st.text_input("タグ（カンマ区切り）", key="new_tags")
-    importance = st.slider("重要度 ⭐", 1, 5, 3, key="new_imp")
+    
+    # 入力欄（キーを使ってリセットしやすくする）
+    title = st.text_input("タイトル", key="input_title")
+    content = st.text_area("内容（改行OK）", height=180, key="input_content")
+    tags = st.text_input("タグ（カンマ区切り）", key="input_tags")
+    importance = st.slider("重要度 ⭐", 1, 5, 3, key="input_imp")
     
     if st.button("投稿する", type="primary", key="post_btn"):
         if title and content:
@@ -94,6 +96,11 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("投稿しました！")
+            
+            # 入力欄をリセット
+            st.session_state.input_title = ""
+            st.session_state.input_content = ""
+            st.session_state.input_tags = ""
             st.rerun()
 
 # ====================== 表示 ======================
@@ -101,7 +108,7 @@ st.subheader("📋 すべてのライフハック")
 
 sorted_data = sorted(data, key=lambda x: x["date"], reverse=(sort_option == "最新順"))
 
-for i, hack in enumerate(sorted_data):   # ← ここをenumerateに変更（重要）
+for i, hack in enumerate(sorted_data):
     stars = "⭐" * hack.get("importance", 3)
     
     with st.expander(f"{stars} {hack['title']} — {hack['date']}", expanded=False):
@@ -111,17 +118,18 @@ for i, hack in enumerate(sorted_data):   # ← ここをenumerateに変更（重
         if hack.get("tags"):
             st.caption(" ".join([f"`{t}`" for t in hack["tags"]]))
 
-        # 編集・削除
+        # 編集・削除（簡略化）
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✏️ 編集", key=f"edit_main_{i}"):
+            if st.button("✏️ 編集", key=f"edit_{i}"):
                 st.session_state[f"editing_{i}"] = True
         with col2:
-            if st.button("🗑 削除", key=f"del_main_{i}"):
+            if st.button("🗑 削除", key=f"del_{i}"):
                 st.session_state[f"confirm_del_{i}"] = True
 
         # 編集モード
         if st.session_state.get(f"editing_{i}", False):
+            # 編集部分（省略せず必要最小限）
             new_title = st.text_input("タイトル", hack["title"], key=f"nt_{i}")
             new_content = st.text_area("内容", hack["content"], height=200, key=f"nc_{i}")
             new_tags = st.text_input("タグ", ",".join(hack.get("tags", [])), key=f"ntg_{i}")
@@ -148,13 +156,13 @@ for i, hack in enumerate(sorted_data):   # ← ここをenumerateに変更（重
             st.warning("本当に削除しますか？")
             c1, c2 = st.columns(2)
             with c1:
-                if st.button("はい", key=f"yes_del_{i}"):
+                if st.button("はい", key=f"yes_{i}"):
                     data.pop(i)
                     save_data(data)
                     st.success("削除しました")
                     st.rerun()
             with c2:
-                if st.button("いいえ", key=f"no_del_{i}"):
+                if st.button("いいえ", key=f"no_{i}"):
                     st.session_state[f"confirm_del_{i}"] = False
                     st.rerun()
 
@@ -162,17 +170,9 @@ for i, hack in enumerate(sorted_data):   # ← ここをenumerateに変更（重
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
-            
-            col1, col2 = st.columns([1, 1])
-            with col1:
-                if st.button("✏️", key=f"edit_r_{i}_{j}"):
-                    st.session_state[f"edit_reply_{i}_{j}"] = True
-            with col2:
-                if st.button("🗑", key=f"del_r_{i}_{j}"):
-                    st.session_state[f"del_reply_{i}_{j}"] = True
 
         # 新規返信
-        reply_text = st.text_area("返信を追加（改行OK）", key=f"new_reply_{i}", height=100)
+        reply_text = st.text_area("返信を追加（改行OK）", key=f"reply_input_{i}", height=100)
         if st.button("返信する", key=f"add_reply_{i}"):
             if reply_text.strip():
                 hack.setdefault("replies", []).append({
@@ -180,5 +180,5 @@ for i, hack in enumerate(sorted_data):   # ← ここをenumerateに変更（重
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M")
                 })
                 save_data(data)
-                st.success("返信追加！")
+                st.success("返信を追加しました！")
                 st.rerun()
