@@ -74,7 +74,7 @@ with st.sidebar:
     st.markdown("---")
     st.header("📝 新規投稿")
     title = st.text_input("タイトル", key="title_input")
-    content = st.text_area("内容（改行OK）", height=180, key="content_input")
+    content = st.text_area("内容（改行OK）", height=150, key="content_input")
     tags = st.text_input("タグ（カンマ区切り）", key="tags_input")
     importance = st.slider("重要度 ⭐", 1, 5, 3, key="imp_input")
     
@@ -92,28 +92,32 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            st.rerun()   # ← これだけで入力欄が自動リセットされます
+            st.session_state.title_input = ""
+            st.session_state.content_input = ""
+            st.session_state.tags_input = ""
+            st.rerun()
 
-# ====================== 表示 ======================
-st.subheader("📋 すべてのライフハック")
+# ====================== コンパクト表示 ======================
+st.subheader("📋 ライフハック一覧")
 
 sorted_data = sorted(data, key=lambda x: x["date"], reverse=(sort_option == "最新順"))
 
 for i, hack in enumerate(sorted_data):
     stars = "⭐" * hack.get("importance", 3)
+    tag_str = " | ".join([f"`{t}`" for t in hack.get("tags", [])]) if hack.get("tags") else ""
     
-    with st.expander(f"{stars} {hack['title']} — {hack['date']}", expanded=False):
+    # コンパクト表示（通常はここだけ）
+    with st.expander(f"{stars} {hack['title']} — {hack['date']} {tag_str}", expanded=False):
+        # 内容表示
         st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
         
-        if hack.get("tags"):
-            st.caption(" ".join([f"`{t}`" for t in hack["tags"]]))
-
+        # 編集・削除ボタン（ここにまとめて表示）
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✏️ 編集", key=f"edit_{hack['id']}"):
                 st.session_state[f"editing_{hack['id']}"] = True
         with col2:
-            if st.button("🗑 このハックを削除", key=f"del_{hack['id']}"):
+            if st.button("🗑 削除", key=f"del_{hack['id']}"):
                 st.session_state[f"confirm_del_{hack['id']}"] = True
 
         # 編集モード
@@ -154,7 +158,7 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"confirm_del_{hack['id']}"] = False
                     st.rerun()
 
-        # 返信
+        # 返信部分
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
