@@ -73,7 +73,6 @@ data = load_data()
 with st.sidebar:
     st.markdown("---")
     st.header("📝 新規投稿")
-    
     title = st.text_input("タイトル", key="title_input")
     content = st.text_area("内容（改行OK）", height=180, key="content_input")
     tags = st.text_input("タグ（カンマ区切り）", key="tags_input")
@@ -94,14 +93,10 @@ with st.sidebar:
             save_data(data)
             st.success("✅ 投稿しました！")
             
-            # 安全なリセット方法
-            if "title_input" in st.session_state:
-                st.session_state.title_input = ""
-            if "content_input" in st.session_state:
-                st.session_state.content_input = ""
-            if "tags_input" in st.session_state:
-                st.session_state.tags_input = ""
-            
+            # 安全にリセット（エラー回避）
+            st.session_state.title_input = ""
+            st.session_state.content_input = ""
+            st.session_state.tags_input = ""
             st.rerun()
 
 # ====================== 表示 ======================
@@ -164,7 +159,11 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"confirm_del_{hack['id']}"] = False
                     st.rerun()
 
-        # 新規返信
+        # 返信部分
+        st.markdown("**スレッド返信**")
+        for j, reply in enumerate(hack.get("replies", [])):
+            st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
+
         reply_text = st.text_area("返信を追加（改行OK）", key=f"reply_input_{hack['id']}", height=100)
         if st.button("返信する", key=f"add_reply_{hack['id']}"):
             if reply_text.strip():
