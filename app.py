@@ -92,12 +92,7 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            
-            # 安全にリセット（エラー回避）
-            st.session_state.title_input = ""
-            st.session_state.content_input = ""
-            st.session_state.tags_input = ""
-            st.rerun()
+            st.rerun()   # ← これだけで入力欄が自動リセットされます
 
 # ====================== 表示 ======================
 st.subheader("📋 すべてのライフハック")
@@ -159,7 +154,7 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"confirm_del_{hack['id']}"] = False
                     st.rerun()
 
-        # 返信部分
+        # 返信
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
