@@ -49,7 +49,7 @@ if not st.session_state.authenticated:
             st.error("パスワードが違います")
     st.stop()
 
-# ====================== データ関数 ======================
+# ====================== データ ======================
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -78,23 +78,19 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🔄 データ復元")
-    uploaded_file = st.file_uploader("バックアップJSONファイルを選択", type=["json"], key="restore_uploader")
-    
+    uploaded_file = st.file_uploader("バックアップJSONを選択", type=["json"], key="restore_uploader")
     if uploaded_file is not None:
-        if st.button("📤 このファイルで復元する", type="primary"):
+        if st.button("📤 復元する", type="primary"):
             try:
-                # ファイル内容を正しく読み込む
-                file_content = uploaded_file.read()
-                restored_data = json.loads(file_content.decode("utf-8"))
-                
+                restored_data = json.load(uploaded_file)
                 if isinstance(restored_data, list):
                     save_data(restored_data)
-                    st.success(f"✅ 復元完了！ {len(restored_data)}件のデータを復元しました。")
+                    st.success(f"✅ 復元完了！ {len(restored_data)}件復元しました。")
                     st.rerun()
                 else:
-                    st.error("❌ ファイルの形式が正しくありません。")
-            except Exception as e:
-                st.error("❌ ファイルの読み込みに失敗しました。正しいバックアップJSONファイルを選択してください。")
+                    st.error("❌ 正しい形式のバックアップファイルではありません。")
+            except:
+                st.error("❌ 読み込み失敗。正しいバックアップJSONファイルを選択してください。")
 
     st.markdown("---")
     st.header("📝 新規投稿")
@@ -117,10 +113,7 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            st.session_state.title_input = ""
-            st.session_state.content_input = ""
-            st.session_state.tags_input = ""
-            st.rerun()
+            st.rerun()   # ← これだけで入力欄がクリアされます
 
 # ====================== メイン表示 ======================
 st.title("🧠 ライフハック・スレッドメモ帳")
