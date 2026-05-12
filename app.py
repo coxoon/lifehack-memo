@@ -5,6 +5,29 @@ import os
 
 st.set_page_config(page_title="ライフハック・スレッドメモ", layout="wide")
 
+# ...（認証部分は省略せず、前のコードと同じものを維持したい場合は言ってください）
+
+st.title("🧠 ライフハック・スレッドメモ帳")
+st.caption("※ データは自動でバックアップしてください")
+
+with st.sidebar:
+    st.warning("⚠️ 無料プランではデータが消える可能性があります")
+    if st.button("💾 今すぐバックアップ", type="primary"):
+        data = load_data()  # 現在のデータ
+        st.download_button(
+            label="lifehacks_backup.json をダウンロード",
+            data=json.dumps(data, ensure_ascii=False, indent=2),
+            file_name=f"lifehacks_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json"
+        )
+
+import streamlit as st
+import json
+from datetime import datetime
+import os
+
+st.set_page_config(page_title="ライフハック・スレッドメモ", layout="wide")
+
 CONFIG_FILE = "config.json"
 DATA_FILE = "lifehacks.json"
 
