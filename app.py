@@ -102,7 +102,12 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            st.rerun()   # ← ここでリフレッシュ（これで入力欄がクリアされます）
+            
+            # 安全に投稿欄をリフレッシュ（ブランクに戻す）
+            st.session_state.title_input = ""
+            st.session_state.content_input = ""
+            st.session_state.tags_input = ""
+            st.rerun()
 
 # ====================== 表示 ======================
 st.subheader("📋 すべてのライフハック")
@@ -175,5 +180,5 @@ for i, hack in enumerate(sorted_data):
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M")
                 })
                 save_data(data)
-                st.success("返信追加！")
+                st.success("返信を追加しました！")
                 st.rerun()
