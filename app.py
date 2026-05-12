@@ -78,19 +78,23 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🔄 データ復元")
-    uploaded_file = st.file_uploader("バックアップJSONを選択", type=["json"], key="restore_uploader")
+    uploaded_file = st.file_uploader("バックアップJSONファイルを選択", type=["json"], key="restore_uploader")
+    
     if uploaded_file is not None:
-        if st.button("📤 復元する", type="primary"):
+        if st.button("📤 このファイルで復元する", type="primary"):
             try:
-                restored = json.load(uploaded_file)
-                if isinstance(restored, list):
-                    save_data(restored)
-                    st.success(f"✅ 復元完了！ {len(restored)}件のデータを復元しました。")
+                # ファイル内容を正しく読み込む
+                file_content = uploaded_file.read()
+                restored_data = json.loads(file_content.decode("utf-8"))
+                
+                if isinstance(restored_data, list):
+                    save_data(restored_data)
+                    st.success(f"✅ 復元完了！ {len(restored_data)}件のデータを復元しました。")
                     st.rerun()
                 else:
-                    st.error("❌ 正しいバックアップファイルではありません。")
-            except:
-                st.error("❌ ファイル読み込み失敗。正しいJSONファイルか確認してください。")
+                    st.error("❌ ファイルの形式が正しくありません。")
+            except Exception as e:
+                st.error("❌ ファイルの読み込みに失敗しました。正しいバックアップJSONファイルを選択してください。")
 
     st.markdown("---")
     st.header("📝 新規投稿")
@@ -130,7 +134,6 @@ for i, hack in enumerate(sorted_data):
     with st.expander(f"{stars} {hack['title']} — {hack['date']}", expanded=False):
         st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
 
-        # メイン操作
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✏️ 編集", key=f"edit_main_{hack['id']}"):
@@ -139,7 +142,6 @@ for i, hack in enumerate(sorted_data):
             if st.button("🗑 削除", key=f"del_main_{hack['id']}"):
                 st.session_state[f"confirm_del_main_{hack['id']}"] = True
 
-        # メイン編集
         if st.session_state.get(f"editing_main_{hack['id']}", False):
             new_title = st.text_input("タイトル", hack["title"], key=f"nt_{hack['id']}")
             new_content = st.text_area("内容", hack["content"], height=200, key=f"nc_{hack['id']}")
@@ -175,7 +177,6 @@ for i, hack in enumerate(sorted_data):
                 if st.button("🗑", key=f"del_r_{i}_{j}"):
                     st.session_state[f"del_reply_{i}_{j}"] = True
 
-            # 返信編集
             if st.session_state.get(f"edit_reply_{i}_{j}", False):
                 new_text = st.text_area("返信編集", reply["content"], key=f"edit_text_{i}_{j}")
                 c1, c2 = st.columns(2)
@@ -191,7 +192,6 @@ for i, hack in enumerate(sorted_data):
                         st.session_state[f"edit_reply_{i}_{j}"] = False
                         st.rerun()
 
-            # 返信削除
             if st.session_state.get(f"del_reply_{i}_{j}", False):
                 st.warning("この返信を削除しますか？")
                 c1, c2 = st.columns(2)
@@ -206,7 +206,6 @@ for i, hack in enumerate(sorted_data):
                         st.session_state[f"del_reply_{i}_{j}"] = False
                         st.rerun()
 
-        # 新規返信
         reply_text = st.text_area("返信を追加（改行OK）", key=f"new_reply_{hack['id']}", height=100)
         if st.button("返信する", key=f"add_reply_{hack['id']}"):
             if reply_text.strip():
