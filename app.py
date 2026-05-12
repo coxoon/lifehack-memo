@@ -49,23 +49,7 @@ if not st.session_state.authenticated:
             st.error("パスワードが違います")
     st.stop()
 
-# ====================== メイン ======================
-st.title("🧠 ライフハック・スレッドメモ帳")
-
-with st.sidebar:
-    st.header("設定")
-    sort_option = st.selectbox("並び順", ["最新順", "古い順"], key="sort_key")
-    
-    if st.button("💾 今すぐバックアップ", type="primary"):
-        current_data = load_data()
-        st.download_button(
-            label="📥 バックアップをダウンロード",
-            data=json.dumps(current_data, ensure_ascii=False, indent=2),
-            file_name=f"lifehacks_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json"
-        )
-
-# ====================== データ ======================
+# ====================== データ関数（ここに移動） ======================
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -78,11 +62,27 @@ def save_data(data):
 
 data = load_data()
 
+# ====================== メイン ======================
+st.title("🧠 ライフハック・スレッドメモ帳")
+
+with st.sidebar:
+    st.header("設定")
+    sort_option = st.selectbox("並び順", ["最新順", "古い順"], key="sort_key")
+    
+    # バックアップボタン（load_dataの後なのでエラーなし）
+    if st.button("💾 今すぐバックアップ", type="primary"):
+        current_data = load_data()
+        st.download_button(
+            label="📥 バックアップをダウンロード",
+            data=json.dumps(current_data, ensure_ascii=False, indent=2),
+            file_name=f"lifehacks_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json"
+        )
+
 # ====================== 新規投稿 ======================
 with st.sidebar:
     st.markdown("---")
     st.header("📝 新規投稿")
-    
     title = st.text_input("タイトル", key="title_input")
     content = st.text_area("内容（改行OK）", height=180, key="content_input")
     tags = st.text_input("タグ（カンマ区切り）", key="tags_input")
@@ -102,8 +102,6 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            
-            # 安全に投稿欄をリフレッシュ（ブランクに戻す）
             st.session_state.title_input = ""
             st.session_state.content_input = ""
             st.session_state.tags_input = ""
@@ -129,7 +127,6 @@ for i, hack in enumerate(sorted_data):
             if st.button("🗑 削除", key=f"del_{hack['id']}"):
                 st.session_state[f"confirm_del_{hack['id']}"] = True
 
-        # 編集モード
         if st.session_state.get(f"editing_{hack['id']}", False):
             new_title = st.text_input("タイトル", hack["title"], key=f"nt_{hack['id']}")
             new_content = st.text_area("内容", hack["content"], height=200, key=f"nc_{hack['id']}")
@@ -152,7 +149,6 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"editing_{hack['id']}"] = False
                     st.rerun()
 
-        # 削除確認
         if st.session_state.get(f"confirm_del_{hack['id']}", False):
             st.warning("本当に削除しますか？")
             c1, c2 = st.columns(2)
@@ -167,7 +163,6 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"confirm_del_{hack['id']}"] = False
                     st.rerun()
 
-        # 返信
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
