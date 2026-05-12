@@ -24,9 +24,9 @@ config = load_config()
 if config["password"] is None:
     st.title("🧠 初回パスワード設定")
     st.markdown("**初めての利用です。パスワードを設定してください。**")
-    pw1 = st.text_input("パスワード", type="password", key="setup1")
-    pw2 = st.text_input("確認", type="password", key="setup2")
     if st.button("設定する", type="primary", key="setup_btn"):
+        pw1 = st.session_state.get("setup1")
+        pw2 = st.session_state.get("setup2")
         if pw1 and pw1 == pw2:
             config["password"] = pw1
             save_config(config)
@@ -49,7 +49,7 @@ if not st.session_state.authenticated:
             st.error("パスワードが違います")
     st.stop()
 
-# ====================== データ関数 ======================
+# ====================== データ ======================
 def load_data():
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -62,16 +62,8 @@ def save_data(data):
 
 data = load_data()
 
-# ====================== メイン ======================
-st.title("🧠 ライフハック・スレッドメモ帳")
-
-with st.sidebar:
-    st.header("設定")
-    sort_option = st.selectbox("並び順", ["最新順", "古い順"], key="sort_key")
-
 # ====================== 新規投稿 ======================
 with st.sidebar:
-    st.markdown("---")
     st.header("📝 新規投稿")
     title = st.text_input("タイトル", key="title_input")
     content = st.text_area("内容（改行OK）", height=150, key="content_input")
@@ -92,35 +84,29 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            st.session_state.title_input = ""
-            st.session_state.content_input = ""
-            st.session_state.tags_input = ""
-            st.rerun()
+            st.rerun()   # ← これだけで入力欄がリフレッシュされます
 
 # ====================== 表示 ======================
 st.subheader("📋 すべてのライフハック")
 
-sorted_data = sorted(data, key=lambda x: x["date"], reverse=(sort_option == "最新順"))
+sorted_data = sorted(data, key=lambda x: x["date"], reverse=True)
 
 for i, hack in enumerate(sorted_data):
     stars = "⭐" * hack.get("importance", 3)
-    tag_str = " | ".join([f"`{t}`" for t in hack.get("tags", [])])
-    
-    with st.expander(f"{stars} {hack['title']} — {hack['date']} {tag_str}", expanded=False):
+    with st.expander(f"{stars} {hack['title']} — {hack['date']}", expanded=False):
         st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
 
         # メイン編集・削除
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("✏️ メイン編集", key=f"edit_main_{hack['id']}"):
+            if st.button("✏️ 編集", key=f"edit_main_{hack['id']}"):
                 st.session_state[f"editing_main_{hack['id']}"] = True
         with col2:
-            if st.button("🗑 メイン削除", key=f"del_main_{hack['id']}"):
+            if st.button("🗑 削除", key=f"del_main_{hack['id']}"):
                 st.session_state[f"confirm_del_main_{hack['id']}"] = True
 
-        # メイン編集モード
+        # メイン編集
         if st.session_state.get(f"editing_main_{hack['id']}", False):
-            # 編集UI（省略せず記載）
             new_title = st.text_input("タイトル", hack["title"], key=f"nt_{hack['id']}")
             new_content = st.text_area("内容", hack["content"], height=200, key=f"nc_{hack['id']}")
             new_tags = st.text_input("タグ", ",".join(hack.get("tags", [])), key=f"ntg_{hack['id']}")
@@ -142,49 +128,46 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"editing_main_{hack['id']}"] = False
                     st.rerun()
 
-        # 返信部分
+        # 返信部分（編集機能付き）
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
-            col1, col2, col3 = st.columns([7, 1.5, 1.5])
+            col1, col2, col3 = st.columns([6, 2, 2])
             with col1:
                 st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
             with col2:
-                if st.button("✏️", key=f"edit_reply_{hack['id']}_{j}"):
-                    st.session_state[f"editing_reply_{hack['id']}_{j}"] = True
+                if st.button("✏️", key=f"edit_r_{i}_{j}"):
+                    st.session_state[f"edit_reply_{i}_{j}"] = True
             with col3:
-                if st.button("🗑", key=f"del_reply_{hack['id']}_{j}"):
-                    st.session_state[f"confirm_del_reply_{hack['id']}_{j}"] = True
+                if st.button("🗑", key=f"del_r_{i}_{j}"):
+                    st.session_state[f"del_reply_{i}_{j}"] = True
 
-            # 返信編集モード
-            if st.session_state.get(f"editing_reply_{hack['id']}_{j}", False):
-                new_reply = st.text_area("返信を編集", reply["content"], height=100, key=f"er_text_{hack['id']}_{j}")
+            # 返信編集
+            if st.session_state.get(f"edit_reply_{i}_{j}", False):
+                new_text = st.text_area("返信を編集", reply["content"], key=f"edit_text_{i}_{j}")
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("保存", key=f"save_reply_{hack['id']}_{j}"):
-                        hack["replies"][j]["content"] = new_reply
+                    if st.button("保存", key=f"save_r_{i}_{j}"):
+                        hack["replies"][j]["content"] = new_text
                         hack["replies"][j]["date"] = datetime.now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
                         save_data(data)
-                        st.session_state[f"editing_reply_{hack['id']}_{j}"] = False
+                        st.session_state[f"edit_reply_{i}_{j}"] = False
                         st.rerun()
                 with c2:
-                    if st.button("キャンセル", key=f"cancel_reply_{hack['id']}_{j}"):
-                        st.session_state[f"editing_reply_{hack['id']}_{j}"] = False
+                    if st.button("キャンセル", key=f"cancel_r_{i}_{j}"):
+                        st.session_state[f"edit_reply_{i}_{j}"] = False
                         st.rerun()
 
-            # 返信削除確認
-            if st.session_state.get(f"confirm_del_reply_{hack['id']}_{j}", False):
+            # 返信削除
+            if st.session_state.get(f"del_reply_{i}_{j}", False):
                 st.warning("この返信を削除しますか？")
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button("はい", key=f"yes_r_{hack['id']}_{j}"):
-                        hack["replies"].pop(j)
-                        save_data(data)
-                        st.success("削除しました")
-                        st.rerun()
-                with c2:
-                    if st.button("いいえ", key=f"no_r_{hack['id']}_{j}"):
-                        st.session_state[f"confirm_del_reply_{hack['id']}_{j}"] = False
-                        st.rerun()
+                if st.button("はい", key=f"yes_rdel_{i}_{j}"):
+                    hack["replies"].pop(j)
+                    save_data(data)
+                    st.success("削除しました")
+                    st.rerun()
+                if st.button("いいえ", key=f"no_rdel_{i}_{j}"):
+                    st.session_state[f"del_reply_{i}_{j}"] = False
+                    st.rerun()
 
         # 新規返信
         reply_text = st.text_area("返信を追加（改行OK）", key=f"new_reply_{hack['id']}", height=100)
