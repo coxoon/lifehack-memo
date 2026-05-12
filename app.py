@@ -5,29 +5,6 @@ import os
 
 st.set_page_config(page_title="ライフハック・スレッドメモ", layout="wide")
 
-# ...（認証部分は省略せず、前のコードと同じものを維持したい場合は言ってください）
-
-st.title("🧠 ライフハック・スレッドメモ帳")
-st.caption("※ データは自動でバックアップしてください")
-
-with st.sidebar:
-    st.warning("⚠️ 無料プランではデータが消える可能性があります")
-    if st.button("💾 今すぐバックアップ", type="primary"):
-        data = load_data()  # 現在のデータ
-        st.download_button(
-            label="lifehacks_backup.json をダウンロード",
-            data=json.dumps(data, ensure_ascii=False, indent=2),
-            file_name=f"lifehacks_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json"
-        )
-
-import streamlit as st
-import json
-from datetime import datetime
-import os
-
-st.set_page_config(page_title="ライフハック・スレッドメモ", layout="wide")
-
 CONFIG_FILE = "config.json"
 DATA_FILE = "lifehacks.json"
 
@@ -78,6 +55,15 @@ st.title("🧠 ライフハック・スレッドメモ帳")
 with st.sidebar:
     st.header("設定")
     sort_option = st.selectbox("並び順", ["最新順", "古い順"], key="sort_key")
+    
+    if st.button("💾 今すぐバックアップ", type="primary"):
+        current_data = load_data()
+        st.download_button(
+            label="📥 バックアップをダウンロード",
+            data=json.dumps(current_data, ensure_ascii=False, indent=2),
+            file_name=f"lifehacks_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            mime="application/json"
+        )
 
 # ====================== データ ======================
 def load_data():
@@ -96,8 +82,9 @@ data = load_data()
 with st.sidebar:
     st.markdown("---")
     st.header("📝 新規投稿")
+    
     title = st.text_input("タイトル", key="title_input")
-    content = st.text_area("内容（改行OK）", height=150, key="content_input")
+    content = st.text_area("内容（改行OK）", height=180, key="content_input")
     tags = st.text_input("タグ（カンマ区切り）", key="tags_input")
     importance = st.slider("重要度 ⭐", 1, 5, 3, key="imp_input")
     
@@ -115,26 +102,20 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            st.session_state.title_input = ""
-            st.session_state.content_input = ""
-            st.session_state.tags_input = ""
-            st.rerun()
+            st.rerun()   # ← ここでリフレッシュ（これで入力欄がクリアされます）
 
-# ====================== コンパクト表示 ======================
-st.subheader("📋 ライフハック一覧")
+# ====================== 表示 ======================
+st.subheader("📋 すべてのライフハック")
 
 sorted_data = sorted(data, key=lambda x: x["date"], reverse=(sort_option == "最新順"))
 
 for i, hack in enumerate(sorted_data):
     stars = "⭐" * hack.get("importance", 3)
-    tag_str = " | ".join([f"`{t}`" for t in hack.get("tags", [])]) if hack.get("tags") else ""
+    tag_str = " | ".join([f"`{t}`" for t in hack.get("tags", [])])
     
-    # コンパクト表示（通常はここだけ）
     with st.expander(f"{stars} {hack['title']} — {hack['date']} {tag_str}", expanded=False):
-        # 内容表示
         st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
-        
-        # 編集・削除ボタン（ここにまとめて表示）
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✏️ 編集", key=f"edit_{hack['id']}"):
@@ -168,7 +149,7 @@ for i, hack in enumerate(sorted_data):
 
         # 削除確認
         if st.session_state.get(f"confirm_del_{hack['id']}", False):
-            st.warning("本当にこのハック全体を削除しますか？")
+            st.warning("本当に削除しますか？")
             c1, c2 = st.columns(2)
             with c1:
                 if st.button("はい", key=f"yes_del_{hack['id']}"):
@@ -181,7 +162,7 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"confirm_del_{hack['id']}"] = False
                     st.rerun()
 
-        # 返信部分
+        # 返信
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
@@ -194,5 +175,5 @@ for i, hack in enumerate(sorted_data):
                     "date": datetime.now().strftime("%Y-%m-%d %H:%M")
                 })
                 save_data(data)
-                st.success("返信を追加しました！")
+                st.success("返信追加！")
                 st.rerun()
