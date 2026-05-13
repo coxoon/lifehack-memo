@@ -81,20 +81,20 @@ with st.sidebar:
     uploaded_file = st.file_uploader("バックアップJSONファイルを選択", type=["json"], key="restore_uploader")
     
     if uploaded_file is not None:
-        if st.button("📤 このファイルで復元する", type="primary", key="restore_btn"):
+        if st.button("📤 復元を実行", type="primary", key="restore_button"):
             try:
                 # 正しく読み込む
-                file_content = uploaded_file.read()
-                restored_data = json.loads(file_content.decode("utf-8"))
+                content = uploaded_file.getvalue()
+                restored_data = json.loads(content.decode("utf-8"))
                 
                 if isinstance(restored_data, list):
                     save_data(restored_data)
                     st.success(f"✅ 復元完了！ {len(restored_data)}件のデータを復元しました。")
                     st.rerun()
                 else:
-                    st.error("❌ ファイルの内容が正しくありません。")
-            except:
-                st.error("❌ 読み込みに失敗しました。正しいバックアップJSONファイルを選択してください。")
+                    st.error("❌ ファイルの内容がリスト形式ではありません。")
+            except Exception:
+                st.error("❌ 読み込み失敗。正しいバックアップJSONファイルを選択してください。")
 
     st.markdown("---")
     st.header("📝 新規投稿")
@@ -175,7 +175,7 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"del_reply_{i}_{j}"] = True
 
             if st.session_state.get(f"edit_reply_{i}_{j}", False):
-                new_text = st.text_area("返信を編集", reply["content"], key=f"edit_text_{i}_{j}")
+                new_text = st.text_area("返信編集", reply["content"], key=f"edit_text_{i}_{j}")
                 c1, c2 = st.columns(2)
                 with c1:
                     if st.button("保存", key=f"save_r_{i}_{j}"):
