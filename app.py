@@ -113,12 +113,7 @@ with st.sidebar:
             data.append(new_hack)
             save_data(data)
             st.success("✅ 投稿しました！")
-            
-            # 安全なリフレッシュ（これで確実に空になる）
-            st.session_state.title_input = ""
-            st.session_state.content_input = ""
-            st.session_state.tags_input = ""
-            st.rerun()
+            st.rerun()   # ← これだけで入力欄が自動クリアされます
 
 # ====================== メイン表示 ======================
 st.title("🧠 ライフハック・スレッドメモ帳")
