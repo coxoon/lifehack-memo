@@ -104,16 +104,4 @@ st.title("🧠 ライフハック・スレッドメモ帳")
 
 st.subheader("📋 すべてのライフハック")
 
-sorted_data = sorted(data, key=lambda x: x["date"], reverse=True)
-
-for i, hack in enumerate(sorted_data):
-    stars = "⭐" * hack.get("importance", 3)
-    with st.expander(f"{stars} {hack['title']} — {hack['date']}", expanded=False):
-        st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
-
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("✏️ 編集", key=f"edit_main_{hack['id']}"):
-                st.session_state[f"editing_main_{hack['id']}"] = True
-        with col2:
-            if st.button("🗑 削除", key
+sorted
