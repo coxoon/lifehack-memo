@@ -78,19 +78,23 @@ with st.sidebar:
 
     st.markdown("---")
     st.subheader("🔄 データ復元")
-    uploaded_file = st.file_uploader("バックアップJSONを選択", type=["json"], key="restore_uploader")
+    uploaded_file = st.file_uploader("バックアップJSONファイルを選択", type=["json"], key="restore_uploader")
+    
     if uploaded_file is not None:
         if st.button("📤 復元する", type="primary", key="restore_btn"):
             try:
-                restored_data = json.load(uploaded_file)
+                # 1回だけ読み込む（重複防止）
+                file_bytes = uploaded_file.getvalue()
+                restored_data = json.loads(file_bytes.decode("utf-8"))
+                
                 if isinstance(restored_data, list):
                     save_data(restored_data)
-                    st.success(f"✅ 復元完了！ {len(restored_data)}件復元しました。")
+                    st.success(f"✅ 復元完了！ {len(restored_data)}件のデータを復元しました。")
                     st.rerun()
                 else:
-                    st.error("❌ ファイル形式が違います。")
-            except:
-                st.error("❌ 読み込み失敗。正しいバックアップJSONを選択してください。")
+                    st.error("❌ ファイルの内容がリスト形式ではありません。")
+            except Exception as e:
+                st.error("❌ 読み込みに失敗しました。正しいバックアップJSONファイルを選択してください。")
 
     st.markdown("---")
     st.header("📝 新規投稿")
@@ -155,20 +159,6 @@ for i, hack in enumerate(sorted_data):
             with c2:
                 if st.button("❌ キャンセル", key=f"cancel_main_{hack['id']}"):
                     st.session_state[f"editing_main_{hack['id']}"] = False
-                    st.rerun()
-
-        if st.session_state.get(f"confirm_del_main_{hack['id']}", False):
-            st.warning("本当に削除しますか？")
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("はい", key=f"yes_del_{hack['id']}"):
-                    data = [h for h in data if h["id"] != hack["id"]]
-                    save_data(data)
-                    st.success("削除しました")
-                    st.rerun()
-            with c2:
-                if st.button("いいえ", key=f"no_del_{hack['id']}"):
-                    st.session_state[f"confirm_del_main_{hack['id']}"] = False
                     st.rerun()
 
         # 返信機能
