@@ -1,6 +1,6 @@
 import streamlit as st
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 
 st.set_page_config(page_title="ライフハック・スレッドメモ", layout="wide")
@@ -62,6 +62,10 @@ def save_data(data):
 
 data = load_data()
 
+# 日本時間（JST）取得関数
+def jst_now():
+    return datetime.utcnow() + timedelta(hours=9)
+
 # ====================== サイドバー ======================
 with st.sidebar:
     st.header("⚙️ 設定")
@@ -72,29 +76,9 @@ with st.sidebar:
         st.download_button(
             label="📥 バックアップダウンロード",
             data=json.dumps(current_data, ensure_ascii=False, indent=2),
-            file_name=f"lifehacks_backup_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            file_name=f"lifehacks_backup_{jst_now().strftime('%Y%m%d_%H%M')}.json",
             mime="application/json"
         )
-
-    st.markdown("---")
-    st.subheader("🔄 データ復元")
-    uploaded_file = st.file_uploader("バックアップJSONファイルを選択", type=["json"], key="restore_uploader")
-    
-    if uploaded_file is not None:
-        if st.button("📤 復元する", type="primary", key="restore_btn"):
-            try:
-                # 1回だけ読み込む（重複防止）
-                file_bytes = uploaded_file.getvalue()
-                restored_data = json.loads(file_bytes.decode("utf-8"))
-                
-                if isinstance(restored_data, list):
-                    save_data(restored_data)
-                    st.success(f"✅ 復元完了！ {len(restored_data)}件のデータを復元しました。")
-                    st.rerun()
-                else:
-                    st.error("❌ ファイルの内容がリスト形式ではありません。")
-            except Exception as e:
-                st.error("❌ 読み込みに失敗しました。正しいバックアップJSONファイルを選択してください。")
 
     st.markdown("---")
     st.header("📝 新規投稿")
@@ -111,7 +95,7 @@ with st.sidebar:
                 "content": content,
                 "tags": [t.strip() for t in tags.split(",") if t.strip()],
                 "importance": importance,
-                "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "date": jst_now().strftime("%Y-%m-%d %H:%M"),   # 日本時間に修正
                 "replies": []
             }
             data.append(new_hack)
@@ -152,13 +136,27 @@ for i, hack in enumerate(sorted_data):
                     hack["content"] = new_content
                     hack["tags"] = [t.strip() for t in new_tags.split(",") if t.strip()]
                     hack["importance"] = new_imp
-                    hack["date"] = datetime.now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
+                    hack["date"] = jst_now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
                     save_data(data)
                     st.session_state[f"editing_main_{hack['id']}"] = False
                     st.rerun()
             with c2:
                 if st.button("❌ キャンセル", key=f"cancel_main_{hack['id']}"):
                     st.session_state[f"editing_main_{hack['id']}"] = False
+                    st.rerun()
+
+        if st.session_state.get(f"confirm_del_main_{hack['id']}", False):
+            st.warning("本当に削除しますか？")
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("はい", key=f"yes_del_{hack['id']}"):
+                    data = [h for h in data if h["id"] != hack["id"]]
+                    save_data(data)
+                    st.success("削除しました")
+                    st.rerun()
+            with c2:
+                if st.button("いいえ", key=f"no_del_{hack['id']}"):
+                    st.session_state[f"confirm_del_main_{hack['id']}"] = False
                     st.rerun()
 
         # 返信機能
@@ -180,7 +178,7 @@ for i, hack in enumerate(sorted_data):
                 with c1:
                     if st.button("保存", key=f"save_r_{i}_{j}"):
                         hack["replies"][j]["content"] = new_text
-                        hack["replies"][j]["date"] = datetime.now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
+                        hack["replies"][j]["date"] = jst_now().strftime("%Y-%m-%d %H:%M") + "（編集済）"
                         save_data(data)
                         st.session_state[f"edit_reply_{i}_{j}"] = False
                         st.rerun()
@@ -208,7 +206,7 @@ for i, hack in enumerate(sorted_data):
             if reply_text.strip():
                 hack.setdefault("replies", []).append({
                     "content": reply_text,
-                    "date": datetime.now().strftime("%Y-%m-%d %H:%M")
+                    "date": jst_now().strftime("%Y-%m-%d %H:%M")
                 })
                 save_data(data)
                 st.success("返信を追加しました！")
