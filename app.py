@@ -106,12 +106,14 @@ st.title("🧠 ライフハック・スレッドメモ帳")
 
 st.subheader("📋 すべてのライフハック")
 
-sorted_data = sorted([h for h in data if not h.get("archived", False) or show_archive], 
-                     key=lambda x: x["date"], reverse=True)
+# 表示対象（アーカイブ表示ON/OFF）
+display_data = [h for h in data if not h.get("archived", False) or show_archive]
+
+sorted_data = sorted(display_data, key=lambda x: x["date"], reverse=True)
 
 for i, hack in enumerate(sorted_data):
     stars = "⭐" * hack.get("importance", 3)
-    archive_mark = " 📦" if hack.get("archived", False) else ""
+    archive_mark = " 📦[アーカイブ]" if hack.get("archived", False) else ""
     
     with st.expander(f"{stars}{archive_mark} {hack['title']} — {hack['date']}", expanded=False):
         st.markdown(hack['content'].replace('\n', '<br>'), unsafe_allow_html=True)
@@ -135,9 +137,9 @@ for i, hack in enumerate(sorted_data):
                     save_data(data)
                     st.rerun()
 
-        # 編集モード（省略せず）
+        # 編集モード（簡略）
         if st.session_state.get(f"editing_main_{hack['id']}", False):
-            # ... 編集UIは省略（必要なら追加します）
+            # 編集UIは必要に応じて追加
             pass
 
         if st.session_state.get(f"confirm_del_main_{hack['id']}", False):
@@ -154,7 +156,7 @@ for i, hack in enumerate(sorted_data):
                     st.session_state[f"confirm_del_main_{hack['id']}"] = False
                     st.rerun()
 
-        # 返信機能（簡略）
+        # 返信機能
         st.markdown("**スレッド返信**")
         for j, reply in enumerate(hack.get("replies", [])):
             st.markdown(reply['content'].replace('\n', '<br>'), unsafe_allow_html=True)
